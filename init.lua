@@ -6,7 +6,7 @@ minetest.register_node("mine_test_mod_tutorial:decowood", {
 minetest.register_chatcommand("foo", {
     privs = { interact = true },
     func = function(name, param)
-        return true, "You(" .. arg[0] .. ") said " .. param .. "!"
+        return true, "You(" .. name .. ") said " .. param .. "!"
     end
 })
 
@@ -19,12 +19,31 @@ minetest.register_chatcommand("whereami", {
     end
 })
 
-minetest.register_chatcommand("put", {
+minetest.register_chatcommand("dirtbox", {
     privs = { interact = true },
     func = function(name, param)
         local player = minetest.get_player_by_name(name)
         local p = player:getpos()
-        minetest.set_node({x=p["x"]+10, y=p["y"]+10, z=p["z"]+10}, {name="default:dirt"})
+        local dirt = {name="default:dirt"}
+        
+        for ix=-10,10,1
+        do
+            minetest.set_node({x=p["x"]+ix, y=p["y"]-10, z=p["z"]-10}, dirt)
+            minetest.set_node({x=p["x"]+ix, y=p["y"]-10, z=p["z"]+10}, dirt)
+            minetest.set_node({x=p["x"]+ix, y=p["y"]+10, z=p["z"]-10}, dirt)
+            minetest.set_node({x=p["x"]+ix, y=p["y"]+10, z=p["z"]+10}, dirt)
+            
+            minetest.set_node({x=p["x"]-10, y=p["y"]+ix, z=p["z"]-10}, dirt)
+            minetest.set_node({x=p["x"]-10, y=p["y"]+ix, z=p["z"]+10}, dirt)
+            minetest.set_node({x=p["x"]+10, y=p["y"]+ix, z=p["z"]-10}, dirt)
+            minetest.set_node({x=p["x"]+10, y=p["y"]+ix, z=p["z"]+10}, dirt)
+            
+            minetest.set_node({x=p["x"]-10, y=p["y"]-10, z=p["z"]+ix}, dirt)
+            minetest.set_node({x=p["x"]-10, y=p["y"]+10, z=p["z"]+ix}, dirt)
+            minetest.set_node({x=p["x"]+10, y=p["y"]-10, z=p["z"]+ix}, dirt)
+            minetest.set_node({x=p["x"]+10, y=p["y"]+10, z=p["z"]+ix}, dirt)
+        end
+        
         return true, "put dirt"
     end
 })
