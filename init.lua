@@ -18,3 +18,13 @@ minetest.register_chatcommand("whereami", {
         return true, p["x"] .. "," .. p["y"] .. "," .. p["z"]
     end
 })
+
+minetest.register_chatcommand("put", {
+    privs = { interact = true },
+    func = function(name, param)
+        local player = minetest.get_player_by_name(name)
+        local p = player:getpos()
+        minetest.set_node({x=p["x"]+10, y=p["y"]+10, z=p["z"]+10}, {name="default:dirt"})
+        return true, "put dirt"
+    end
+})
