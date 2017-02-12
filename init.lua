@@ -58,12 +58,12 @@ function file_exists(file)
   return f ~= nil
 end
 
--- get all lines from a file, returns an empty 
+-- get all lines from a file, returns an empty
 -- list/table if the file does not exist
 function lines_from(file)
   if not file_exists(file) then return {} end
-  lines = {}
-  for line in io.lines(file) do 
+  local lines = {}
+  for line in io.lines(file) do
     lines[#lines + 1] = line
   end
   return lines
@@ -82,7 +82,51 @@ minetest.register_chatcommand("readtest", {
         for k,v in pairs(lines) do
           print('line[' .. k .. ']', v)
         end
-        
+
         return true, "read test.txt"
+    end
+})
+
+
+minetest.register_chatcommand("placemap", {
+    privs = { interact = true },
+    func = function(name, param)
+      local file = minetest.get_modpath("mine_test_mod_tutorial") .. '/map.txt'
+      local lines = lines_from(file)
+
+      local player = minetest.get_player_by_name(name)
+      local pos = player:getpos()
+      local stone = {name="default:stone", param1=0}
+      local air = {name="air", param1=0}
+      local door_h = {name="doors:door_steel_b_1"}
+      local door_v = {name="doors:door_steel_t_1"}
+
+      local height = tonumber(lines[1])
+
+      for iy=0, height+1, 1
+      do
+        for ix=1, table.maxn(lines), 1
+        do
+          for iz=1, string.len(lines[ix]), 1
+          do
+            local char = string.sub(lines[ix], iz, iz)
+            if iy == 0 or iy > height or char == "#" then
+              minetest.set_node({x=pos["x"]+ix, y=pos["y"]+iy, z=pos["z"]+iz}, stone)
+            elseif char == "-" or char == "|" then
+              -- door placement doesn't work like this, so just make doorways low
+              -- if iy == 1 then
+              --   minetest.set_node({x=pos["x"]+ix, y=pos["y"]+iy, z=pos["z"]+iz}, door_h)
+              if iy > 2 then
+                minetest.set_node({x=pos["x"]+ix, y=pos["y"]+iy, z=pos["z"]+iz}, stone)
+              else
+                minetest.set_node({x=pos["x"]+ix, y=pos["y"]+iy, z=pos["z"]+iz}, air)
+              end
+            else
+              minetest.set_node({x=pos["x"]+ix, y=pos["y"]+iy, z=pos["z"]+iz}, air)
+            end
+          end
+        end
+      end
+      return true, "map imported"
     end
 })
