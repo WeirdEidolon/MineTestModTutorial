@@ -25,25 +25,25 @@ minetest.register_chatcommand("dirtbox", {
         local player = minetest.get_player_by_name(name)
         local p = player:getpos()
         local dirt = {name="default:dirt"}
-        
+
         for ix=-10,10,1
         do
             minetest.set_node({x=p["x"]+ix, y=p["y"]-10, z=p["z"]-10}, dirt)
             minetest.set_node({x=p["x"]+ix, y=p["y"]-10, z=p["z"]+10}, dirt)
             minetest.set_node({x=p["x"]+ix, y=p["y"]+10, z=p["z"]-10}, dirt)
             minetest.set_node({x=p["x"]+ix, y=p["y"]+10, z=p["z"]+10}, dirt)
-            
+
             minetest.set_node({x=p["x"]-10, y=p["y"]+ix, z=p["z"]-10}, dirt)
             minetest.set_node({x=p["x"]-10, y=p["y"]+ix, z=p["z"]+10}, dirt)
             minetest.set_node({x=p["x"]+10, y=p["y"]+ix, z=p["z"]-10}, dirt)
             minetest.set_node({x=p["x"]+10, y=p["y"]+ix, z=p["z"]+10}, dirt)
-            
+
             minetest.set_node({x=p["x"]-10, y=p["y"]-10, z=p["z"]+ix}, dirt)
             minetest.set_node({x=p["x"]-10, y=p["y"]+10, z=p["z"]+ix}, dirt)
             minetest.set_node({x=p["x"]+10, y=p["y"]-10, z=p["z"]+ix}, dirt)
             minetest.set_node({x=p["x"]+10, y=p["y"]+10, z=p["z"]+ix}, dirt)
         end
-        
+
         return true, "put dirt"
     end
 })
@@ -98,18 +98,46 @@ minetest.register_chatcommand("placemap", {
       local pos = player:getpos()
       local stone = {name="default:stone", param1=0}
       local air = {name="air", param1=0}
+      local door = {name="my_castle_doors:door6_locked"}
       local door_h = {name="doors:door_steel_b_1"}
       local door_v = {name="doors:door_steel_t_1"}
 
       local height = tonumber(lines[1])
 
-      for iy=0, height+1, 1
+      local function get_local_height(ix, iz, height, lines)
+        local local_height = height
+        local north = string.sub(lines[ix-1], iz, iz)
+        local south = string.sub(lines[ix+1], iz, iz)
+        local west = string.sub(lines[ix], iz-1, iz-1)
+        local east = string.sub(lines[ix], iz+1, iz+1)
+
+        if north ~= '.' then
+          local_height = local_height-1
+        end
+        if south ~= '.' then
+          local_height = local_height-1
+        end
+        if west ~= '.' then
+          local_height = local_height-1
+        end
+        if east ~= '.' then
+          local_height = local_height-1
+        end
+        return local_height
+      end
+
+      for ix=2, table.maxn(lines)-1, 1
       do
-        for ix=1, table.maxn(lines), 1
+        for iz=2, string.len(lines[ix])-1, 1
         do
-          for iz=1, string.len(lines[ix]), 1
+          local char = string.sub(lines[ix], iz, iz)
+          local local_height = height
+          if char == '.' then
+            local_height = get_local_height(ix, iz, height, lines)
+          end
+
+          for iy=0, height+1, 1
           do
-            local char = string.sub(lines[ix], iz, iz)
             if iy == 0 or iy > height or char == "#" then
               minetest.set_node({x=pos["x"]+ix, y=pos["y"]+iy, z=pos["z"]+iz}, stone)
             elseif char == "-" or char == "|" then
@@ -122,7 +150,11 @@ minetest.register_chatcommand("placemap", {
                 minetest.set_node({x=pos["x"]+ix, y=pos["y"]+iy, z=pos["z"]+iz}, air)
               end
             else
-              minetest.set_node({x=pos["x"]+ix, y=pos["y"]+iy, z=pos["z"]+iz}, air)
+              if iy < local_height then
+                minetest.set_node({x=pos["x"]+ix, y=pos["y"]+iy, z=pos["z"]+iz}, air)
+              else
+                minetest.set_node({x=pos["x"]+ix, y=pos["y"]+iy, z=pos["z"]+iz}, stone)
+              end
             end
           end
         end
