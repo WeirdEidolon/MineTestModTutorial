@@ -16,10 +16,10 @@ function file_exists(file)
   return f ~= nil
 end
 
--- get all lines from a file, returns an empty
--- list/table if the file does not exist
+
+-- get all lines from a file, returns nil if the file does not exist
 function lines_from(file)
-  if not file_exists(file) then return {} end
+  if not file_exists(file) then return nil end
   local lines = {}
   for line in io.lines(file) do
     lines[#lines + 1] = line
@@ -49,18 +49,31 @@ minetest.register_chatcommand("readtest", {
 minetest.register_chatcommand("placemap", {
     privs = { interact = true },
     func = function(name, param)
-      local file = minetest.get_modpath("mine_test_mod_tutorial") .. '/map.txt'
+      if param == "" then
+        return false, "Specify a file name"
+      end
+      local file = minetest.get_modpath("mine_test_mod_tutorial") .. '/' .. param
       local lines = lines_from(file)
+      if lines == nil then
+        return false, "Could not find " .. file
+      end
 
       local player = minetest.get_player_by_name(name)
+      local settings = lines[1]
       local pos = player:getpos()
-      local stone = {name="default:stone", param1=0}
+      pos["x"] = pos["x"] + tonumber(string.match(settings, "x=(-?%d+)"))
+      pos["y"] = pos["y"] + tonumber(string.match(settings, "y=(-?%d+)"))
+      pos["z"] = pos["z"] + tonumber(string.match(settings, "z=(-?%d+)"))
+
+      local height = tonumber(string.match(settings, "height=(%d+)"))
+      local roof = tonumber(string.match(settings, "roof=(%d+)"))
+      local floor = tonumber(string.match(settings, "floor=(%d+)"))
+      local fill_mat = {name=string.match(settings, "material=(%a+:?%a+)"), param1=0}
+
       local air = {name="air", param1=0}
       local door = {name="my_castle_doors:door6_locked"}
       local door_h = {name="doors:door_steel_b_1"}
       local door_v = {name="doors:door_steel_t_1"}
-
-      local height = tonumber(lines[1])
 
       local function get_local_height(ix, iz, height, lines)
         local local_height = height
@@ -97,13 +110,13 @@ minetest.register_chatcommand("placemap", {
           for iy=0, height+1, 1
           do
             if iy == 0 or iy > height or char == "#" then
-              minetest.set_node({x=pos["x"]+ix, y=pos["y"]+iy, z=pos["z"]+iz}, stone)
+              minetest.set_node({x=pos["x"]+ix, y=pos["y"]+iy, z=pos["z"]+iz}, fill_mat)
             elseif char == "-" or char == "|" then
               -- door placement doesn't work like this, so just make doorways low
               -- if iy == 1 then
               --   minetest.set_node({x=pos["x"]+ix, y=pos["y"]+iy, z=pos["z"]+iz}, door_h)
               if iy > 2 then
-                minetest.set_node({x=pos["x"]+ix, y=pos["y"]+iy, z=pos["z"]+iz}, stone)
+                minetest.set_node({x=pos["x"]+ix, y=pos["y"]+iy, z=pos["z"]+iz}, fill_mat)
               else
                 minetest.set_node({x=pos["x"]+ix, y=pos["y"]+iy, z=pos["z"]+iz}, air)
               end
@@ -111,7 +124,7 @@ minetest.register_chatcommand("placemap", {
               if iy < local_height then
                 minetest.set_node({x=pos["x"]+ix, y=pos["y"]+iy, z=pos["z"]+iz}, air)
               else
-                minetest.set_node({x=pos["x"]+ix, y=pos["y"]+iy, z=pos["z"]+iz}, stone)
+                minetest.set_node({x=pos["x"]+ix, y=pos["y"]+iy, z=pos["z"]+iz}, fill_mat)
               end
             end
           end
