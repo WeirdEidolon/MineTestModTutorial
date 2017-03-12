@@ -1,15 +1,3 @@
-minetest.register_node("mine_test_mod_tutorial:decowood", {
-	tiles = {"tutorial_decowood.png"},
-	groups = {snappy=1,choppy=2,oddly_breakable_by_hand=2,flammable=3},
-})
-
-minetest.register_chatcommand("foo", {
-    privs = { interact = true },
-    func = function(name, param)
-        return true, "You(" .. name .. ") said " .. param .. "!"
-    end
-})
-
 minetest.register_chatcommand("whereami", {
     privs = { interact = true },
     func = function(name, param)
@@ -19,38 +7,8 @@ minetest.register_chatcommand("whereami", {
     end
 })
 
-minetest.register_chatcommand("dirtbox", {
-    privs = { interact = true },
-    func = function(name, param)
-        local player = minetest.get_player_by_name(name)
-        local p = player:getpos()
-        local dirt = {name="default:dirt"}
-        
-        for ix=-10,10,1
-        do
-            minetest.set_node({x=p["x"]+ix, y=p["y"]-10, z=p["z"]-10}, dirt)
-            minetest.set_node({x=p["x"]+ix, y=p["y"]-10, z=p["z"]+10}, dirt)
-            minetest.set_node({x=p["x"]+ix, y=p["y"]+10, z=p["z"]-10}, dirt)
-            minetest.set_node({x=p["x"]+ix, y=p["y"]+10, z=p["z"]+10}, dirt)
-            
-            minetest.set_node({x=p["x"]-10, y=p["y"]+ix, z=p["z"]-10}, dirt)
-            minetest.set_node({x=p["x"]-10, y=p["y"]+ix, z=p["z"]+10}, dirt)
-            minetest.set_node({x=p["x"]+10, y=p["y"]+ix, z=p["z"]-10}, dirt)
-            minetest.set_node({x=p["x"]+10, y=p["y"]+ix, z=p["z"]+10}, dirt)
-            
-            minetest.set_node({x=p["x"]-10, y=p["y"]-10, z=p["z"]+ix}, dirt)
-            minetest.set_node({x=p["x"]-10, y=p["y"]+10, z=p["z"]+ix}, dirt)
-            minetest.set_node({x=p["x"]+10, y=p["y"]-10, z=p["z"]+ix}, dirt)
-            minetest.set_node({x=p["x"]+10, y=p["y"]+10, z=p["z"]+ix}, dirt)
-        end
-        
-        return true, "put dirt"
-    end
-})
-
 
 -- http://lua-users.org/wiki/FileInputOutput
-
 -- see if the file exists
 function file_exists(file)
   local f = io.open(file, "rb")
@@ -58,12 +16,12 @@ function file_exists(file)
   return f ~= nil
 end
 
--- get all lines from a file, returns an empty 
--- list/table if the file does not exist
+
+-- get all lines from a file, returns nil if the file does not exist
 function lines_from(file)
-  if not file_exists(file) then return {} end
-  lines = {}
-  for line in io.lines(file) do 
+  if not file_exists(file) then return nil end
+  local lines = {}
+  for line in io.lines(file) do
     lines[#lines + 1] = line
   end
   return lines
@@ -82,7 +40,96 @@ minetest.register_chatcommand("readtest", {
         for k,v in pairs(lines) do
           print('line[' .. k .. ']', v)
         end
-        
+
         return true, "read test.txt"
+    end
+})
+
+
+minetest.register_chatcommand("placemap", {
+    privs = { interact = true },
+    func = function(name, param)
+      if param == "" then
+        return false, "Specify a file name"
+      end
+      local file = minetest.get_modpath("mine_test_mod_tutorial") .. '/' .. param
+      local lines = lines_from(file)
+      if lines == nil then
+        return false, "Could not find " .. file
+      end
+
+      local player = minetest.get_player_by_name(name)
+      local settings = lines[1]
+      local pos = player:getpos()
+      pos["x"] = pos["x"] + tonumber(string.match(settings, "x=(-?%d+)"))
+      pos["y"] = pos["y"] + tonumber(string.match(settings, "y=(-?%d+)"))
+      pos["z"] = pos["z"] + tonumber(string.match(settings, "z=(-?%d+)"))
+
+      local height = tonumber(string.match(settings, "height=(%d+)"))
+      local roof = tonumber(string.match(settings, "roof=(%d+)"))
+      local floor = tonumber(string.match(settings, "floor=(%d+)"))
+      local fill_mat = {name=string.match(settings, "material=(%a+:?%a+)"), param1=0}
+
+      local air = {name="air", param1=0}
+      local door = {name="my_castle_doors:door6_locked"}
+      local door_h = {name="doors:door_steel_b_1"}
+      local door_v = {name="doors:door_steel_t_1"}
+
+      local function get_local_height(ix, iz, height, lines)
+        local local_height = height
+        local north = string.sub(lines[ix-1], iz, iz)
+        local south = string.sub(lines[ix+1], iz, iz)
+        local west = string.sub(lines[ix], iz-1, iz-1)
+        local east = string.sub(lines[ix], iz+1, iz+1)
+
+        if north ~= '.' then
+          local_height = local_height-1
+        end
+        if south ~= '.' then
+          local_height = local_height-1
+        end
+        if west ~= '.' then
+          local_height = local_height-1
+        end
+        if east ~= '.' then
+          local_height = local_height-1
+        end
+        return local_height
+      end
+
+      for ix=3, table.maxn(lines)-1, 1
+      do
+        for iz=2, string.len(lines[ix])-1, 1
+        do
+          local char = string.sub(lines[ix], iz, iz)
+          local local_height = height
+          if char == '.' then
+            local_height = get_local_height(ix, iz, height, lines)
+          end
+
+          for iy=0, height+1, 1
+          do
+            if iy == 0 or iy > height or char == "#" then
+              minetest.set_node({x=pos["x"]+ix, y=pos["y"]+iy, z=pos["z"]+iz}, fill_mat)
+            elseif char == "-" or char == "|" then
+              -- door placement doesn't work like this, so just make doorways low
+              -- if iy == 1 then
+              --   minetest.set_node({x=pos["x"]+ix, y=pos["y"]+iy, z=pos["z"]+iz}, door_h)
+              if iy > 2 then
+                minetest.set_node({x=pos["x"]+ix, y=pos["y"]+iy, z=pos["z"]+iz}, fill_mat)
+              else
+                minetest.set_node({x=pos["x"]+ix, y=pos["y"]+iy, z=pos["z"]+iz}, air)
+              end
+            else
+              if iy < local_height then
+                minetest.set_node({x=pos["x"]+ix, y=pos["y"]+iy, z=pos["z"]+iz}, air)
+              else
+                minetest.set_node({x=pos["x"]+ix, y=pos["y"]+iy, z=pos["z"]+iz}, fill_mat)
+              end
+            end
+          end
+        end
+      end
+      return true, "map imported"
     end
 })
