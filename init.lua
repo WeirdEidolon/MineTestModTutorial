@@ -126,7 +126,7 @@ minetest.register_chatcommand("placemap", {
         return local_height
       end
 
-      for ix=2, table.maxn(lines)-1, 1
+      for ix=3, table.maxn(lines)-1, 1
       do
         for iz=2, string.len(lines[ix])-1, 1
         do
